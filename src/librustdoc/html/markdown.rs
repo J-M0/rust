@@ -35,6 +35,7 @@ use std::str::{self, CharIndices};
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Weak};
 
+use latex2mathml::{DisplayStyle as MathDisplayStyle, latex_to_mathml};
 use pulldown_cmark::{
     BrokenLink, CodeBlockKind, CowStr, Event, LinkType, Options, Parser, Tag, TagEnd, html,
 };
@@ -70,6 +71,7 @@ pub(crate) fn summary_opts() -> Options {
         | Options::ENABLE_STRIKETHROUGH
         | Options::ENABLE_TASKLISTS
         | Options::ENABLE_SMART_PUNCTUATION
+        | Options::ENABLE_MATH
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -80,6 +82,57 @@ pub enum HeadingOffset {
     H4,
     H5,
     H6,
+}
+
+struct MathReplacer<'a, I>
+where
+    I: Iterator<Item = SpannedEvent<'a>>,
+{
+    inner: I,
+}
+
+impl<'a, I> MathReplacer<'a, I>
+where
+    I: Iterator<Item = SpannedEvent<'a>>,
+{
+    fn new(iter: I) -> Self {
+        Self { inner: iter }
+    }
+}
+
+impl<'a, I> Iterator for MathReplacer<'a, I>
+where
+    I: Iterator<Item = SpannedEvent<'a>>,
+{
+    type Item = SpannedEvent<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let event = self.inner.next();
+        let Some(event) = event else {
+            return None;
+        };
+
+        Some((
+            match event.0 {
+                Event::InlineMath(latex) => match latex_to_mathml(&latex, MathDisplayStyle::Inline)
+                {
+                    Ok(math) => Event::Html(math.into()),
+                    Err(err) => Event::Html(
+                        format!(r#"<math display="inline"><merror>{err}</merror></math>"#).into(),
+                    ),
+                },
+                Event::DisplayMath(latex) => match latex_to_mathml(&latex, MathDisplayStyle::Block)
+                {
+                    Ok(math) => Event::Html(math.into()),
+                    Err(err) => Event::Html(
+                        format!(r#"<math display="block"><merror>{err}</merror></math>"#).into(),
+                    ),
+                },
+                e => e,
+            },
+            event.1,
+        ))
+    }
 }
 
 /// When `to_string` is called, this struct will emit the HTML corresponding to
@@ -1373,6 +1426,7 @@ impl<'a> Markdown<'a> {
         let p = p.into_offset_iter();
 
         ids.handle_footnotes(|ids, existing_footnotes| {
+            let p = MathReplacer::new(p);
             let p = HeadingLinks::new(p, None, ids, heading_offset);
             let p = SpannedLinkReplacer::new(p, links);
             let p = footnotes::Footnotes::new(p, existing_footnotes);
@@ -1489,6 +1543,7 @@ impl MarkdownItemInfo<'_> {
         let mut s = String::with_capacity(md.len() * 3 / 2);
 
         ids.handle_footnotes(|ids, existing_footnotes| {
+            let p = MathReplacer::new(p);
             let p = HeadingLinks::new(p, None, ids, HeadingOffset::H1);
             let p = footnotes::Footnotes::new(p, existing_footnotes);
             let p = TableWrapper::new(p.map(|(ev, _)| ev));

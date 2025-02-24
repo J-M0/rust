@@ -247,6 +247,7 @@ pub fn main_body_opts() -> Options {
         | Options::ENABLE_STRIKETHROUGH
         | Options::ENABLE_TASKLISTS
         | Options::ENABLE_SMART_PUNCTUATION
+        | Options::ENABLE_MATH
 }
 
 fn strip_generics_from_path_segment(segment: Vec<char>) -> Result<String, MalformedGenerics> {
