@@ -25,7 +25,7 @@ tracing = "0.1"
 tracing-tree = "0.3.0"
 threadpool = "1.8.1"
 unicode-segmentation = "1.9"
-latex2mathml = "0.2.3"
+latex2mathml = { git = "https://github.com/J-M0/latex2mathml.git", branch = "fixes"}
 
 [dependencies.tracing-subscriber]
 version = "0.3.3"
