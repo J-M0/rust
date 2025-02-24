@@ -107,10 +107,7 @@ where
     type Item = SpannedEvent<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let event = self.inner.next();
-        let Some(event) = event else {
-            return None;
-        };
+        let event = self.inner.next()?;
 
         Some((
             match event.0 {
