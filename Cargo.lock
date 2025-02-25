@@ -1959,7 +1959,10 @@ dependencies = [
 [[package]]
 name = "latex2mathml"
 version = "0.2.3"
-source = "git+https://github.com/J-M0/latex2mathml.git?branch=fixes#c13ed18df9856ad26e6a075ad89f34feec55972f"
+source = "git+https://github.com/J-M0/latex2mathml.git?branch=fixes#c3f70dfa7a71cfccdd2a982a87bc2cfb5ef90c7b"
+dependencies = [
+ "pulldown-cmark-escape",
+]
 
 [[package]]
 name = "lazy_static"
